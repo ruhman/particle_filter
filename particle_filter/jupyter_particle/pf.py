@@ -20,6 +20,8 @@ from helper_functions import (convert_pose_inverse_transform,
                               convert_pose_to_xy_and_theta,
                               angle_diff)
 
+from copy import deepcopy
+
 class Particle(object):
     """ Represents a hypothesis (particle) of the robot's pose consisting of x,y and theta (yaw)
         Attributes:

@@ -14,7 +14,7 @@ from helper_functions import angle_normalize, angle_diff
 particle_size = 7
 
 def convert_to_figure(xy_theta):
-    """
+    """ 
         Converts a xy_theta to screen coordinates
     """
     pass
@@ -49,7 +49,7 @@ def nb_draw_map(mapa_numpy, particles = None, initial_position=False, pose=False
 
     return ax # Retornamos o contexto grafico caso queiram fazer algo depois
 
-
+        
 def draw_initial_pose(pose_xytheta, ax):
     """
         Metodo que desenha a pose inicial
@@ -63,7 +63,7 @@ def draw_initial_pose(pose_xytheta, ax):
     #end_x = x + deltax
     #end_y = y + deltay
     nb_draw_arrow(x, y, theta, ax, l=l, color='r', width=2, headwidth=6, headlength=6)
-
+    
 def nb_draw_arrow(x, y, theta, ax, l = 15, color='y', headwidth=3.0, headlength=3, width=0.001):
     """
         Desenha uma seta na posição x, y com um ângulo theta
@@ -84,7 +84,7 @@ def nb_draw_particle_cloud(particles, ax):
         nb_draw_arrow(p.x, p.y, p.theta, ax, particle_size, color='b')
 
 def normalize_particles(particle_cloud):
-    #
+    # 
     #global particle_cloud
     w_sum = 0
     for p in particle_cloud:
@@ -93,7 +93,7 @@ def normalize_particles(particle_cloud):
         p.normalize(w_sum)
 
 def update_robot_pose(particle_cloud, W):
-    """
+    """ 
         O objetivo deste item é fornecer uma estimativa da pose do robo
 
         Pode-se escolher como isto é feito.
@@ -104,7 +104,7 @@ def update_robot_pose(particle_cloud, W):
     """
     robot_pose = [0, 0, 0]
     return robot_pose
-
+        
 def nb_initialize_particle_cloud(xy_theta=None):
     """ Initialize the particle cloud.
         Arguments
@@ -116,11 +116,11 @@ def nb_initialize_particle_cloud(xy_theta=None):
     global particle_cloud
     # TODO create particles
     particle_cloud = nb_create_particles(initial_pose)
-
+        
     normalize_particles(particle_cloud)
-    update_robot_pose(particle_cloud, np.ones(len(particle_cloud)))
+    update_robot_pose(particle_cloud, np.ones(len(particle_cloud)))    
     return particle_cloud
-
+    
 def nb_create_particles(pose, var_x = 50, var_y = 50, var_theta = math.pi/3, num=30):
     """
         Cria num particulas
@@ -144,7 +144,7 @@ def nb_draw_robot(position, ax, radius=10):
     circle = Circle((position[0], position[1]), radius, facecolor='none',
                     edgecolor=(0.0, 0.8, 0.2), linewidth=2, alpha=0.7)
     ax.add_patch(circle)
-
+    
 def nb_create_ros_map(numpy_image):
     """
         Este notebook nao usa o service GetMap, portanto
@@ -153,7 +153,7 @@ def nb_create_ros_map(numpy_image):
     grid = OccupancyGrid()
     grid.info.resolution = 1
     w = numpy_image.shape[0]
-    h = numpy_image.shape[1]
+    h = numpy_image.shape[1]    
     grid.info.width = w
     grid.info.height = h
     image_data = []
@@ -162,7 +162,7 @@ def nb_create_ros_map(numpy_image):
         if cell < 0.005:
             cell = 0
         image_data.append(cell)
-
+    
     print("Occurences of zero",image_data.count(0))
     grid.data = image_data
     return grid
@@ -174,7 +174,7 @@ def nb_interp(min_a, max_a, a, dst_min, dst_max):
         max_a
         a - valor na faixa de origem
         dst_min, dst_max - a faixa de destino
-    """
+    """    
     return dst_min + ((a - min_a)/(max_a - min_a))*(dst_max - dst_min)
 
 def nb_cria_occupancy_field_image(occupancy_field, numpy_image):
@@ -185,7 +185,7 @@ def nb_cria_occupancy_field_image(occupancy_field, numpy_image):
         for j in range(occupancy_image.shape[0]):
             occupancy_image[i][j] = int(nb_interp(min_dist, max_dist, occupancy_field.get_closest_obstacle_distance(j,i), 0, 255))
     return occupancy_image
-
+   
 
 
 
@@ -198,10 +198,10 @@ def nb_outside_image(x, y, img):
 def nb_found_obstacle(x, y, x0, y0, img):
     gray_value = 1.0 - img[x][y]/255.0
     if gray_value > free_thresh and gray_value < occupied_thresh:
-        return math.sqrt( (x0 - x)**2 + (y0 - x)**2 )
+        return math.sqrt( (x0 - x)**2 + (y0 - y)**2 )
 
-
-
+        
+    
 def nb_find_discrete_line_versor(xa, ya, angle):
     """
         Encontra a direção para a qual o sensor laser do robô no ângulo angle aponta
@@ -219,31 +219,40 @@ def nb_find_discrete_line_versor(xa, ya, angle):
     for i in range(len(versor)):
         versor[i]*=0.6
     return versor
-
+    
 
 
 def nb_simulate_lidar(robot_pose, angles, img):
     """
         Simula a leitura `real` do LIDAR supondo que o robot esteja na robot_pose e com sensores nos angulos angles
-
+        
         Nao e' necessario fazer isso em seu projeto
-
+        
         retorna uma lista de pontos de intersecao ou -1 se o sensor nao ler nada naquele angulo
-
+        
     """
     a = angles.copy()
     theta = 2 # para ficar mais intuitivo
-
+    
     #robot_pose[theta] = angle_normalize(robot_pose[theta])
-
+    
     lidar_results = {}
-
+    
     result_img = np.zeros(img.shape)
     result_img.fill(255) # Deixamos tudo branco
-
+    
     x0 = robot_pose[0]
     y0 = robot_pose[1]
 
+    # Se o robô simulado (que pode ser uma partícula) já estiver fora da imagem, retornamos zero
+    if nb_outside_image(int(x0), int(y0), img):
+    	for a in angles:
+    		lidar_results[a] = 0
+
+    	return lidar_results, result_img
+
+
+    
     for angulo in a:
         # Faz o angulo ser relativo ao robo
         ang = robot_pose[theta]+angulo
@@ -258,14 +267,14 @@ def nb_simulate_lidar(robot_pose, angles, img):
             result_img[int(y), int(x)] = 0 # Marcamos o raio na imagem y,x porque numpy e' linha, coluna
             if nb_outside_image(int(x), int(y), img):
                 # A imagem acabou, nao achamos nada
-                lidar_results[angulo] = float("Inf")
+                lidar_results[angulo] = 0
                 print("Outside at ",x ,"  ",y, "  for angle ", ang)
                 break
             dist = nb_found_obstacle(int(y), int(x), y0, x0, img)
-            if dist > -1:
+            if dist > -1:   
                 # Achamos alguma coisa
-                lidar_results[angulo] = dist
-                #print("Hit for ",x,  "  ",y, "  for angle ", ang)
+                lidar_results[angulo] = dist 
+                #print("Hit for ",x,  "  ",y, "  for angle ", ang)                
                 break
             # Keep going if none of the "ifs" has been triggered
             x += vers[0]
@@ -274,5 +283,5 @@ def nb_simulate_lidar(robot_pose, angles, img):
             if y > img.shape[0] or x > img.shape[1]:
                 break
 
-
+            
     return lidar_results, result_img
